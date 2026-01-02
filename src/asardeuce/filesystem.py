@@ -99,7 +99,7 @@ class Integrity(BaseModel):
     model_config = ConfigDict(extra='forbid')
     algorithm: Literal["SHA256"]
     hash: Sha256Hash
-    blockSize: Annotated[int, Field(strict=True, gt=0)]
+    blockSize: Annotated[int, Field(strict=True, gt=0, exclude=True)]
     blocks: list[Sha256Hash] = Field(exclude=True)
 
 
