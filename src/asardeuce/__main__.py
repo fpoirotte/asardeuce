@@ -97,13 +97,13 @@ def list_files(archive_path, fmt):
     raise RuntimeError(f"This should never happen ({fmt})")
 
 
-def extract_file(archive_path, filename):
+def extract_file(archive_path, filename, output):
     fp = open_archive(archive_path)
     fs = Filesystem(fp)
     for entry in fs:
         if isinstance(entry, File) and str(entry.fullpath) == filename:
-            entry.extract(sys.stdout.buffer)
-            sys.stdout.buffer.flush()
+            entry.extract(output)
+            output.flush()
             return
     print(f"ERROR: file not found: {filename}", file=sys.stderr)
     sys.exit(1)
@@ -157,6 +157,7 @@ def main() -> None:
         'extract-file', aliases=['ef'],
         help='extract one file from archive',
     )
+    extract_file_cmd.add_argument("--output", "-o", type=argparse.FileType('wb', 0), default=sys.stdout.buffer)
     extract_file_cmd.add_argument("archive", type=argparse.FileType('rb', 0))
     extract_file_cmd.add_argument("filename")
 
@@ -189,7 +190,7 @@ def main() -> None:
     if args.command in ('list', 'l'):
         list_files(args.archive, args.format)
     elif args.command in ('extract-file', 'ef'):
-        extract_file(args.archive, args.filename)
+        extract_file(args.archive, args.filename, args.output)
     elif args.command in ('extract', 'e'):
         extract_all(args.archive, args.dest)
     else:
