@@ -9,7 +9,7 @@ It tries to stay close to the original API, with some provisions to make it feel
 The installation instructions may vary depending on the Python package manager in use.
 Refer to your package manager's documentation for more information.
 
-The following command shows how to install asardeuce using the [Python Package Installer (pip)](https://github.com/pypa/pip):
+The following command shows how to install asardeuce using [The Python Package Installer (pip)](https://github.com/pypa/pip):
 
 ```sh
 pip3 install asardeuce
