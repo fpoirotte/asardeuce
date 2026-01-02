@@ -12,7 +12,7 @@ Refer to your package manager's documentation for more information.
 The following command shows how to install asardeuce using [The Python Package Installer (pip)](https://github.com/pypa/pip):
 
 ```sh
-pip3 install asardeuce
+pip3 install git+https://github.com/fpoirotte/asardeuce.git@main
 ```
 
 ## Usage
