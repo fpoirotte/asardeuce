@@ -1,4 +1,5 @@
 import argparse
+import os
 import sys
 import textwrap
 
@@ -61,19 +62,34 @@ def list_files(archive_path, fmt):
 
     if fmt == ListFormat.SHORT:
         for entry in fs:
-            print(str(entry.fullpath))
+            fullpath = str(entry.fullpath).removesuffix(os.sep)
+            if isinstance(entry, Folder):
+                fullpath += os.sep
+            elif isinstance(entry, Symlink):
+                fullpath += f" -> {entry.link}"
+            print(fullpath)
         return
 
     if fmt == ListFormat.VERBOSE:
-        print("Name".ljust(90), "Executable", "Size".rjust(20), "SHA-256")
-        print("----".ljust(90), "----------", "----".rjust(20), "-------")
+        print("Type", "Name".ljust(90), "Executable", "Size".rjust(12), "SHA-256")
+        print("----", "----".ljust(90), "----------", "----".rjust(12), "-------")
         for entry in fs:
-            print(
-                str(entry.fullpath).ljust(90),
-                str(entry.executable).ljust(10),
-                str(entry.size).rjust(20),
-                entry.integrity.hash
-            )
+            fullpath = str(entry.fullpath).removesuffix(os.sep)
+            if isinstance(entry, Folder):
+                fullpath += os.sep
+                print("dir ", fullpath)
+            elif isinstance(entry, Symlink):
+                print("link", fullpath, "->", entry.link)
+            elif isinstance(entry, File):
+                print(
+                    "file",
+                    str(entry.fullpath).ljust(90),
+                    str(entry.executable).ljust(10),
+                    str(entry.size).rjust(12),
+                    entry.integrity.hash
+                )
+            else:
+                raise RuntimeError(f"This should never happen ({entry})")
         return
 
     if fmt == ListFormat.JSON:
