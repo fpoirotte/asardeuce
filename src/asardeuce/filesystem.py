@@ -12,18 +12,18 @@ from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, SkipValidation, 
 from .pickle import Pickle
 
 
-Sha256Hash = Annotated[str, StringConstraints(to_upper=True, pattern=r'^[0-9a-fA-F]{64}$')]
+Sha256Hash = Annotated[str, StringConstraints(to_lower=True, pattern=r'^[0-9a-fA-F]{64}$')]
 
-BLOCK_SIZE = 4096
-EMPTY_FILE_HASH = "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+BLOCK_SIZE = 8192
+EMPTY_FILE_HASH = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 
 
 class Integrity(BaseModel):
     model_config: ConfigDict = ConfigDict(extra='forbid')
     algorithm: Literal["SHA256"]
     hash: Sha256Hash
-    blockSize: Annotated[int, Field(strict=True, gt=0, exclude=True)]
-    blocks: list[Sha256Hash] = Field(exclude=True)
+    blockSize: Annotated[int, Field(strict=True, gt=0, le=2**25)]
+    blocks: list[Sha256Hash] = []
 
 
 class Node(BaseModel):
@@ -44,7 +44,7 @@ class Folder(Node):
 class File(Node):
     model_config: ConfigDict = ConfigDict(extra='forbid')
     size: Annotated[int, Field(strict=True, ge=0)]
-    offset: Annotated[int, Field(exclude=True, ge=0)]
+    offset: Annotated[int, Field(ge=0)]
     executable: bool = False
     integrity: Integrity
 
@@ -71,19 +71,19 @@ class File(Node):
                 global_hash.update(data)
 
             expected = self.integrity.blocks[block]
-            actual = block_hash.hexdigest().upper()
+            actual = block_hash.hexdigest()
             if actual != expected:
                 raise RuntimeError(
                     f"Invalid hash for block #{block} in '{self.fullpath}' "
-                    f"(expected: {expected}, actual: {actual})"
+                    f"(expected: {expected}, got: {actual})"
                 )
             total_size -= block_size
             block += 1
 
         expected = self.integrity.hash
-        actual = global_hash.hexdigest().upper()
+        actual = global_hash.hexdigest()
         if actual != expected:
-            raise RuntimeError(f"Invalid hash for '{self.fullpath}' (expected: {expected}, actual: {actual})")
+            raise RuntimeError(f"Invalid hash for '{self.fullpath}' (expected: {expected}, got: {actual})")
 
 
 class Filesystem:
@@ -163,4 +163,4 @@ class Filesystem:
             yield data
 
 
-__all__ = ('Filesystem', 'Node', 'Symlink', 'File')
+__all__ = ('Filesystem', 'File', 'Folder', 'Integrity', 'Node', 'Symlink', 'EMPTY_FILE_HASH')
