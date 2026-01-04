@@ -44,22 +44,22 @@ def list_files_short(fs: Filesystem, stream: TextIO) -> None:
 
 
 def list_files_verbose(fs: Filesystem, stream: TextIO) -> None:
-    print("Type", "Name".ljust(90), "Executable", "Size".rjust(12), "SHA-256", file=stream)
-    print("----", "----".ljust(90), "----------", "----".rjust(12), "-------", file=stream)
+    print("Type", "SHA-256".ljust(64), "Executable", "Size".rjust(12), "Name", file=stream)
+    print("----", "-------".ljust(64), "----------", "----".rjust(12), "----", file=stream)
     for entry in fs:
         fullpath = str(entry.fullpath).removesuffix(os.sep)
         if isinstance(entry, Folder):
             fullpath += os.sep
-            print("dir ", fullpath, file=stream)
+            print("dir".ljust(93), fullpath, file=stream)
         elif isinstance(entry, Symlink):
-            print("link", fullpath, "->", entry.link, file=stream)
+            print("link".ljust(93), fullpath, "->", entry.link, file=stream)
         elif isinstance(entry, File):
             print(
                 "file",
-                str(entry.fullpath).ljust(90),
+                entry.integrity.hash,
                 str(entry.executable).ljust(10),
                 str(entry.size).rjust(12),
-                entry.integrity.hash,
+                str(entry.fullpath),
                 file=stream,
             )
         else:
