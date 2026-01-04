@@ -1,4 +1,4 @@
-from .api import extract_all, extract_file, list_files
+from .api import extract_all, extract_file, list_files, ListFormat
 from .pickle import Pickle
 
 
