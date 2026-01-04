@@ -17,10 +17,14 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "pydantic" },
+    { name = "typing-extensions" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "pydantic", specifier = ">=2.9.2" }]
+requires-dist = [
+    { name = "pydantic", specifier = ">=2.9.2" },
+    { name = "typing-extensions", specifier = ">=4.4.0" },
+]
 
 [[package]]
 name = "pydantic"

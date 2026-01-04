@@ -1,30 +1,28 @@
 import argparse
-import os
 import sys
-import textwrap
 
-from enum import StrEnum
 from importlib.metadata import version
 from pathlib import Path
+from typing_extensions import Self
 
-from .filesystem import File, Filesystem, Folder, Symlink
-
-
-class ListFormat(StrEnum):
-    SHORT = "short"
-    VERBOSE = "verbose"
-    JSON = "json"
-    PRETTY_JSON = "pretty-json"
+from .api import extract_all, extract_file, list_files, ListFormat
 
 
 class ArgumentParser(argparse.ArgumentParser):
-    def format_usage(self):
+    """
+    Custom argument parser that slightly changes the way the usage message & help
+    are displayed, to match those of the original "asar" command.
+
+    This is done purely for cosmetic reasons.
+    """
+
+    def format_usage(self: Self) -> str:
         formatter = self._get_formatter()
         formatter.add_usage(self.usage, self._actions,
                             self._mutually_exclusive_groups, prefix="Usage: ")
         return formatter.format_help()
 
-    def format_help(self):
+    def format_help(self: Self) -> str:
         formatter = self._get_formatter()
 
         # usage
@@ -48,106 +46,10 @@ class ArgumentParser(argparse.ArgumentParser):
         return formatter.format_help()
 
 
-def open_archive(archive_path, mode: str = 'rb'):
-    if isinstance(archive_path, str):
-        archive_path = Path(archive_path)
-    if isinstance(archive_path, Path):
-        return archive_path.open(mode)
-    return archive_path
-
-
-def list_files(archive_path, fmt):
-    fp = open_archive(archive_path)
-    fs = Filesystem(fp)
-
-    if fmt == ListFormat.SHORT:
-        for entry in fs:
-            fullpath = str(entry.fullpath).removesuffix(os.sep)
-            if isinstance(entry, Folder):
-                fullpath += os.sep
-            elif isinstance(entry, Symlink):
-                fullpath += f" -> {entry.link}"
-            print(fullpath)
-        return
-
-    if fmt == ListFormat.VERBOSE:
-        print("Type", "Name".ljust(90), "Executable", "Size".rjust(12), "SHA-256")
-        print("----", "----".ljust(90), "----------", "----".rjust(12), "-------")
-        for entry in fs:
-            fullpath = str(entry.fullpath).removesuffix(os.sep)
-            if isinstance(entry, Folder):
-                fullpath += os.sep
-                print("dir ", fullpath)
-            elif isinstance(entry, Symlink):
-                print("link", fullpath, "->", entry.link)
-            elif isinstance(entry, File):
-                print(
-                    "file",
-                    str(entry.fullpath).ljust(90),
-                    str(entry.executable).ljust(10),
-                    str(entry.size).rjust(12),
-                    entry.integrity.hash
-                )
-            else:
-                raise RuntimeError(f"This should never happen ({entry})")
-        return
-
-    if fmt == ListFormat.JSON:
-        print("[", end="")
-        for i, entry in enumerate(fs):
-            if i > 0:
-                print(",", end="")
-            print(textwrap.indent(entry.model_dump_json(), "  "), end="")
-        print("]")
-        return
-
-    if fmt == ListFormat.PRETTY_JSON:
-        print("[")
-        for i, entry in enumerate(fs):
-            if i > 0:
-                print(",")
-            print(entry.model_dump_json(indent=2), end="")
-        print("]")
-        return
-
-    raise RuntimeError(f"This should never happen ({fmt})")
-
-
-def extract_file(archive_path, filename, output):
-    fp = open_archive(archive_path)
-    fs = Filesystem(fp)
-    for entry in fs:
-        if isinstance(entry, File) and str(entry.fullpath) == filename:
-            entry.extract(output)
-            output.flush()
-            return
-    print(f"ERROR: file not found: {filename}", file=sys.stderr)
-    sys.exit(1)
-
-
-def extract_all(archive_path, destination):
-    fp = open_archive(archive_path)
-    fs = Filesystem(fp)
-    if not destination.exists():
-        destination.mkdir(parents=True, exist_ok=True)
-
-    for entry in fs:
-        fullpath = destination / entry.fullpath
-        if isinstance(entry, File):
-            with fullpath.open('wb') as fp:
-                entry.extract(fp)
-                print(f"[F] {entry.fullpath}")
-        elif isinstance(entry, Folder):
-            fullpath.mkdir(parents=False, exist_ok=True)
-            print(f"[D] {entry.fullpath}")
-        elif isinstance(entry, Symlink):
-            fullpath.symlink_to(entry.link)
-            print(f"[L] {entry.fullpath}")
-        else:
-            raise RuntimeError(f"This should never happen ({entry!r})")
-
-
 def main() -> None:
+    """
+    Entrypoint for when asardeuce is executed as a standalone program.
+    """
     v = version('asardeuce')
     parser = ArgumentParser(prog='asardeuce', add_help=False, usage="%(prog)s [options] [command]")
     subparsers = parser.add_subparsers(dest="command", title="Commands", metavar=" ")
@@ -203,14 +105,20 @@ def main() -> None:
         parser.print_help()
         return
 
-    if args.command in ('list', 'l'):
-        list_files(args.archive, args.format)
-    elif args.command in ('extract-file', 'ef'):
-        extract_file(args.archive, args.filename, args.output)
-    elif args.command in ('extract', 'e'):
-        extract_all(args.archive, args.dest)
-    else:
-        raise RuntimeError(f"This should never happen ({args.command})")
+    try:
+        if args.command in ('list', 'l'):
+            list_files(args.archive, args.format, stream=sys.stdout)
+        elif args.command in ('extract-file', 'ef'):
+            extract_file(args.archive, args.filename, args.output)
+        elif args.command in ('extract', 'e'):
+            extract_all(args.archive, args.dest, stream=sys.stdout)
+        else:
+            raise RuntimeError(f"This should never happen ({args.command})")
+    except FileNotFoundError:
+        parser.exit(1, f"ERROR: file not found: {filename}")
+    except Exception as e:
+        parser.exit(1, str(e))
+    parser.exit()
 
 
 if __name__ == '__main__':
