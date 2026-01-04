@@ -202,7 +202,7 @@ class Pickle:
         self.header = self.header.ljust(endOffset + dataLength - length)
         self.set_payload_size(newSize)
         self.writeOffset = newSize
-        return true
+        return True
 
     def resize(self: Self, new_capacity: int) -> None:
         new_capacity = align_int(new_capacity, PAYLOAD_UNIT)
