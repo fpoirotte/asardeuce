@@ -2,7 +2,7 @@
 
 asardeuce (pronunced /æ.zɚ.djuːs/) is a port of Electron's [`asar` project](https://github.com/electron/asar/) to Python.
 
-It tries to stay close to the original API, with some provisions to make it feel more Pythonic.
+It tries to keep an API similar to that of `asar`, with some provisions to make it feel more Pythonic.
 
 ## Installation
 
@@ -47,11 +47,6 @@ $ python -m asardeuce --help
 ### As a library
 
 TODO
-
-## Limitations
-
-As of yet, asardeuce only supports listing and extracting files from an ASAR archive.
-Support for archives creation ("packing") may be provided later on.
 
 ## License
 

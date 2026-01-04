@@ -5,7 +5,7 @@ from importlib.metadata import version
 from pathlib import Path
 from typing_extensions import Self
 
-from .api import extract_all, extract_file, list_files, ListFormat
+from .api import create_package, extract_all, extract_file, list_files, ListFormat
 
 
 class ArgumentParser(argparse.ArgumentParser):
@@ -55,7 +55,14 @@ def main() -> None:
     subparsers = parser.add_subparsers(dest="command", title="Commands", metavar=" ")
 
     # pack|p
-    # @TODO
+    pack_cmd = subparsers.add_parser(
+        'pack', aliases=['p'],
+        help='create asar archive',
+    )
+    pack_cmd.add_argument("dir", type=Path)
+    pack_cmd.add_argument("output")
+    pack_cmd.add_argument("--exclude-hidden", action="store_true", help="exclude hidden files")
+    pack_cmd.add_argument("--force", "-f", action="store_true", help="overwrite output file")
 
     # list|l
     list_cmd = subparsers.add_parser(
@@ -106,7 +113,17 @@ def main() -> None:
         return
 
     try:
-        if args.command in ('list', 'l'):
+        if args.command in ('pack', 'p'):
+            output = args.output
+            if output == "-":
+                output = sys.stdout.buffer
+            else:
+                try:
+                    output = open(output, "wb" if args.force else "xb")
+                except FileExistsError:
+                    parser.exit(1, f"'{output}' already exists. Use --force to overwrite\n")
+            create_package(args.dir, output, exclude_hidden=args.exclude_hidden, stream=sys.stdout)
+        elif args.command in ('list', 'l'):
             list_files(args.archive, args.format, stream=sys.stdout)
         elif args.command in ('extract-file', 'ef'):
             extract_file(args.archive, args.filename, args.output)
@@ -114,8 +131,6 @@ def main() -> None:
             extract_all(args.archive, args.dest, stream=sys.stdout)
         else:
             raise RuntimeError(f"This should never happen ({args.command})")
-    except FileNotFoundError:
-        parser.exit(1, f"ERROR: file not found: {filename}")
     except Exception as e:
         parser.exit(1, str(e))
     parser.exit()
